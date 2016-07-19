@@ -9,6 +9,7 @@ import (
 
 var (
 	errAlreadyConnected = errors.New("Connect() or ConnectTLS() has already been called")
+	errAlreadyAsync     = errors.New("Async() has already been called")
 )
 
 // UnknownReplyError records the sentence whose Word is unknown.

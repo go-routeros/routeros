@@ -10,34 +10,31 @@ type replyCloser interface {
 	close(err error)
 }
 
-// Async starts asynchronous mode. It returns immediately.
-// Run() and Listen() may then be called from multiple goroutines simultaneously.
-// Will panic if called multiple times.
+// Async starts asynchronous mode and returns immediately.
 func (c *Client) Async() <-chan error {
 	c.Lock()
 	defer c.Unlock()
 
+	errC := make(chan error, 1)
 	if c.async {
-		panic("Async must be called only once")
+		errC <- errAlreadyAsync
+		close(errC)
+		return errC
 	}
-
 	c.async = true
 	c.tags = make(map[string]sentenceProcessor)
-	return c.asyncLoopChan()
+	go c.asyncLoopChan(errC)
+	return errC
 }
 
-func (c *Client) asyncLoopChan() <-chan error {
-	errC := make(chan error, 1)
-	go func() {
-		defer close(errC)
-		// If c.Close() has been called, c.closing will be true, and
-		// err will be “use of closed network connection”. Ignore that error.
-		err := c.asyncLoop()
-		if err != nil && !c.closing {
-			errC <- err
-		}
-	}()
-	return errC
+func (c *Client) asyncLoopChan(errC chan<- error) {
+	defer close(errC)
+	// If c.Close() has been called, c.closing will be true, and
+	// err will be “use of closed network connection”. Ignore that error.
+	err := c.asyncLoop()
+	if err != nil && !c.closing {
+		errC <- err
+	}
 }
 
 func (c *Client) asyncLoop() error {
