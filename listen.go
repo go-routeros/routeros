@@ -37,10 +37,9 @@ func (c *Client) ListenArgs(sentence []string) (*ListenReply, error) {
 }
 
 // ListenArgsQueue sends a sentence to the RouterOS device and returns immediately.
-// Will panic if Async() has not been called yet.
 func (c *Client) ListenArgsQueue(sentence []string, queueSize int) (*ListenReply, error) {
 	if !c.async {
-		panic("Listen*() needs Async()")
+		c.Async()
 	}
 
 	c.nextTag++

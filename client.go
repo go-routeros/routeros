@@ -34,6 +34,9 @@ type Client struct {
 
 // Connect connects and login to the RouterOS device.
 func (c *Client) Connect() error {
+	if c.conn != nil {
+		return errAlreadyConnected
+	}
 	conn, err := net.Dial("tcp", c.Address)
 	if err != nil {
 		return err
@@ -43,6 +46,9 @@ func (c *Client) Connect() error {
 
 // ConnectTLS connects and login to the RouterOS device using TLS.
 func (c *Client) ConnectTLS(tlsConfig *tls.Config) error {
+	if c.conn != nil {
+		return errAlreadyConnected
+	}
 	conn, err := tls.Dial("tcp", c.Address, tlsConfig)
 	if err != nil {
 		return err
@@ -51,18 +57,15 @@ func (c *Client) ConnectTLS(tlsConfig *tls.Config) error {
 }
 
 // Close closes the connection to the RouterOS device.
-// It will panic if Connect() has not been called yet.
-// Connect() will panic if called again on c.
 func (c *Client) Close() {
+	if c.conn == nil {
+		return
+	}
 	c.closing = true
 	c.conn.Close()
 }
 
 func (c *Client) connect(conn net.Conn) error {
-	if c.closing {
-		panic("Must not Connect*() twice on the same struct")
-	}
-
 	c.conn = conn
 	c.r = proto.NewReader(conn)
 	c.w = proto.NewWriter(conn)

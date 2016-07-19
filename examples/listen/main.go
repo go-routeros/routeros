@@ -15,6 +15,7 @@ var (
 	username = flag.String("username", "admin", "User name")
 	password = flag.String("password", "admin", "Password")
 	timeout  = flag.Duration("timeout", 10*time.Second, "Cancel after")
+	async    = flag.Bool("async", false, "Call Async()")
 	useTLS   = flag.Bool("tls", false, "Use TLS")
 )
 
@@ -38,12 +39,20 @@ func main() {
 	}
 	defer c.Close()
 
+	if *async {
+		explicitAsync(c)
+	} else {
+		implicitAsync(c)
+	}
+}
+
+func explicitAsync(c *api.Client) {
 	errC := c.Async()
 
 	go func() {
 		l, err := c.ListenArgs(strings.Split(*command, " "))
 		if err != nil {
-			log.Print(err)
+			log.Fatal(err)
 		}
 
 		go func() {
@@ -70,8 +79,38 @@ func main() {
 		c.Close()
 	}()
 
-	err = <-errC
+	err := <-errC
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+func implicitAsync(c *api.Client) {
+	l, err := c.ListenArgs(strings.Split(*command, " "))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	go func() {
+		time.Sleep(*timeout)
+
+		log.Print("Cancelling the RouterOS command...")
+		_, err := l.Cancel()
+		if err != nil {
+			log.Fatal(err)
+		}
+	}()
+
+	log.Print("Waiting for !re...")
+	for sen := range l.Chan() {
+		log.Printf("Update: %s", sen)
+	}
+
+	err = l.Err()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Print("Done!")
+	c.Close()
 }

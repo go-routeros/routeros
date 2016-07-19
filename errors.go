@@ -1,9 +1,14 @@
 package routeros
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/go-routeros/routeros/proto"
+)
+
+var (
+	errAlreadyConnected = errors.New("Connect() or ConnectTLS() has already been called")
 )
 
 // UnknownReplyError records the sentence whose Word is unknown.
