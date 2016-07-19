@@ -2,316 +2,91 @@ package routeros
 
 import (
 	"bytes"
+	"flag"
 	"io"
-	"os"
-	"strconv"
 	"testing"
 
-	"github.com/andre-luiz-dos-santos/routeros-go/proto"
+	"github.com/go-routeros/routeros/proto"
 )
 
-type TestVars struct {
-	Username string
-	Password string
-	Address  string
+var (
+	routerosAddress  = flag.String("routeros.address", "", "RouterOS address:port")
+	routerosUsername = flag.String("routeros.username", "admin", "RouterOS user name")
+	routerosPassword = flag.String("routeros.password", "admin", "RouterOS password")
+)
+
+type liveTest struct {
+	*testing.T
+	c *Client
 }
 
-// Make sure we have the env vars to run, handle bailing if we don't
-func PrepVars(t *testing.T) TestVars {
-	var tv TestVars
-
-	addr := os.Getenv("ROS_TEST_TARGET")
-	if addr == "" {
-		t.Skip("Can't run test because ROS_TEST_TARGET undefined")
-	} else {
-		tv.Address = addr
-	}
-
-	username := os.Getenv("ROS_TEST_USER")
-	if username == "" {
-		tv.Username = "admin"
-		t.Logf("ROS_TEST_USER not defined. Assuming %s\n", tv.Username)
-	} else {
-		tv.Username = username
-	}
-
-	password := os.Getenv("ROS_TEST_PASSWORD")
-	if password == "" {
-		tv.Password = "admin"
-		t.Logf("ROS_TEST_PASSWORD not defined. Assuming %s\n", tv.Password)
-	} else {
-		tv.Password = password
-	}
-
-	return tv
+func newLiveTest(t *testing.T) *liveTest {
+	tt := &liveTest{T: t}
+	tt.connect()
+	return tt
 }
 
-// Test logging in and out
-func TestLogin(t *testing.T) {
-	tv := PrepVars(t)
-	c := &Client{
-		Address:  tv.Address,
-		Username: tv.Username,
-		Password: tv.Password,
+func (t *liveTest) connect() {
+	if *routerosAddress == "" {
+		t.Skip("Flag -routeros.address not set")
 	}
-	err := c.Connect()
+	t.c = &Client{
+		Address:  *routerosAddress,
+		Username: *routerosUsername,
+		Password: *routerosPassword,
+	}
+	err := t.c.Connect()
 	if err != nil {
 		t.Fatal(err)
 	}
 }
 
-// Test running a command (uptime)
-func TestCommand(t *testing.T) {
-	tv := PrepVars(t)
-	c := &Client{
-		Address:  tv.Address,
-		Username: tv.Username,
-		Password: tv.Password,
-	}
-	err := c.Connect()
+func (t *liveTest) run(sentence ...string) *Reply {
+	t.Logf("Run: %#q", sentence)
+	r, err := t.c.RunArgs(sentence)
 	if err != nil {
 		t.Fatal(err)
 	}
-	res, err := c.Call("/system/resource/getall", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	uptime := res.Re[0].Map["uptime"]
-	t.Logf("Uptime: %s\n", uptime)
+	t.Logf("Reply: %s", r)
+	return r
 }
 
-func TestCommandAsyncA(t *testing.T) {
-	tv := PrepVars(t)
-	c := &Client{
-		Address:  tv.Address,
-		Username: tv.Username,
-		Password: tv.Password,
+func (t *liveTest) getUptime() {
+	r := t.run("/system/resource/print")
+	if len(r.Re) != 1 {
+		t.Fatalf("len(!re)=%d; want 1", len(r.Re))
 	}
-	err := c.Connect()
-	if err != nil {
-		t.Fatal(err)
+	_, ok := r.Re[0].Map["uptime"]
+	if !ok {
+		t.Fatal("Missing uptime")
 	}
-	defer c.Close()
-	c.Async()
-	res, err := c.Call("/system/resource/getall", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	uptime := res.Re[0].Map["uptime"]
-	t.Logf("Uptime: %s\n", uptime)
 }
 
-// func TestCommandAsyncB(t *testing.T) {
-// 	tv := PrepVars(t)
-// 	c := &Client{
-// 		Address:  tv.Address,
-// 		Username: tv.Username,
-// 		Password: tv.Password,
-// 	}
-// 	err := c.Connect()
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
-// 	go func() {
-// 		defer c.Close()
-// 		res, err := c.Call("/system/resource/getall", nil)
-// 		if err != nil {
-// 			t.Error(err)
-// 		}
-// 		uptime := res.Re[0].Map["uptime"]
-// 		t.Logf("Uptime: %s\n", uptime)
-// 	}()
-// 	c.Loop()
-// }
+func TestRunSync(tt *testing.T) {
+	t := newLiveTest(tt)
+	defer t.c.Close()
+	t.getUptime()
+}
 
-// Test querying data (getting IP addresses on ether1)
-func TestQuery(t *testing.T) {
-	tv := PrepVars(t)
-	c := &Client{
-		Address:  tv.Address,
-		Username: tv.Username,
-		Password: tv.Password,
-	}
-	err := c.Connect()
-	if err != nil {
-		t.Fatal(err)
-	}
+func TestRunAsync(tt *testing.T) {
+	t := newLiveTest(tt)
+	defer t.c.Close()
+	t.c.Async()
+	t.getUptime()
+}
 
-	res, err := c.Query("/ip/address/print", Query{
-		Pairs:    []Pair{Pair{"interface", "ether1", "="}},
-		Proplist: []string{"address"},
-	})
-	if err != nil {
-		t.Error(err)
-	}
-
-	t.Log("IP addresses on ether1:")
-	for _, v := range res.Re {
-		for _, sv := range v.List {
-			t.Log(sv)
+func TestRunError(tt *testing.T) {
+	t := newLiveTest(tt)
+	defer t.c.Close()
+	for i, sentence := range [][]string{
+		{"/xxx"},
+		{"/ip/address/add", "=address=127.0.0.2/32", "=interface=xxx"},
+	} {
+		t.Logf("#%d: Run: %#q", i, sentence)
+		_, err := t.c.RunArgs(sentence)
+		if err == nil {
+			t.Error("Success; want error from RouterOS device trying to run an invalid command")
 		}
-	}
-}
-
-// Test adding some bridges (test of Call)
-func TestCallAddBridges(t *testing.T) {
-	tv := PrepVars(t)
-	c := &Client{
-		Address:  tv.Address,
-		Username: tv.Username,
-		Password: tv.Password,
-	}
-	err := c.Connect()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	for i := 1; i <= 10; i++ {
-		var pairs []Pair
-		bName := "test-bridge" + strconv.Itoa(i)
-		pairs = append(pairs, Pair{Key: "name", Value: bName})
-		pairs = append(pairs, Pair{Key: "comment", Value: "test bridge number " + strconv.Itoa(i)})
-		pairs = append(pairs, Pair{Key: "arp", Value: "disabled"})
-		res, err := c.Call("/interface/bridge/add", pairs)
-		if err != nil {
-			t.Errorf("Error adding bridge: %s\n", err)
-		}
-		t.Logf("reply from adding bridge: %+v\n", res)
-	}
-}
-
-// Test getting list of interfaces (test Query)
-func TestQueryMultiple(t *testing.T) {
-	tv := PrepVars(t)
-	c := &Client{
-		Address:  tv.Address,
-		Username: tv.Username,
-		Password: tv.Password,
-	}
-	err := c.Connect()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	var q Query
-	q.Pairs = append(q.Pairs, Pair{Key: "type", Value: "bridge", Op: "="})
-
-	res, err := c.Query("/interface/print", q)
-	if err != nil {
-		t.Error(err)
-	}
-	if len(res.Re) <= 1 {
-		t.Error("Did not get multiple SubPairs from bridge interface query")
-	}
-}
-
-// Test query with proplist
-func TestQueryWithProplist(t *testing.T) {
-	tv := PrepVars(t)
-	c := &Client{
-		Address:  tv.Address,
-		Username: tv.Username,
-		Password: tv.Password,
-	}
-	err := c.Connect()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	var q Query
-	q.Proplist = append(q.Proplist, "name")
-	q.Proplist = append(q.Proplist, "comment")
-	q.Proplist = append(q.Proplist, ".id")
-	q.Pairs = append(q.Pairs, Pair{Key: "type", Value: "bridge", Op: "="})
-	res, err := c.Query("/interface/print", q)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	for _, s := range res.Re {
-		b := s.Map
-		t.Logf("Found bridge %s (%s)\n", b["name"], b["comment"])
-
-	}
-}
-
-// Test query with proplist
-func TestCallRemoveBridges(t *testing.T) {
-	tv := PrepVars(t)
-	c := &Client{
-		Address:  tv.Address,
-		Username: tv.Username,
-		Password: tv.Password,
-	}
-	err := c.Connect()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	var q Query
-	q.Proplist = append(q.Proplist, ".id")
-	q.Pairs = append(q.Pairs, Pair{Key: "type", Value: "bridge", Op: "="})
-	res, err := c.Query("/interface/print", q)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	for _, s := range res.Re {
-		v := s.Map
-		var pairs []Pair
-		pairs = append(pairs, Pair{Key: ".id", Value: v[".id"]})
-		_, err = c.Call("/interface/bridge/remove", pairs)
-		if err != nil {
-			t.Errorf("error removing bridge: %s\n", err)
-		}
-	}
-}
-
-// Test call that should trigger error response from router
-func TestCallCausesError(t *testing.T) {
-	tv := PrepVars(t)
-	c := &Client{
-		Address:  tv.Address,
-		Username: tv.Username,
-		Password: tv.Password,
-	}
-	err := c.Connect()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	var pairs []Pair
-	pairs = append(pairs, Pair{Key: "address", Value: "192.168.99.1/32"})
-	pairs = append(pairs, Pair{Key: "comment", Value: "this address should never be added"})
-	pairs = append(pairs, Pair{Key: "interface", Value: "badbridge99"})
-	_, err = c.Call("/ip/address/add", pairs)
-	if err != nil {
-		t.Logf("Error adding address to nonexistent bridge: %s\n", err)
-	} else {
-		t.Error("did not get error when adding address to nonexistent bridge")
-	}
-}
-
-// Test query that should trigger error response from router
-func TestQueryCausesError(t *testing.T) {
-	tv := PrepVars(t)
-	c := &Client{
-		Address:  tv.Address,
-		Username: tv.Username,
-		Password: tv.Password,
-	}
-	err := c.Connect()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	var q Query
-	q.Proplist = append(q.Proplist, ".id")
-	_, err = c.Query("/ip/address/sneeze", q)
-	if err != nil {
-		t.Logf("Error querying with nonexistent command: %s\n", err)
-	} else {
-		t.Error("did not get error when querying nonexistent command")
 	}
 }
 
