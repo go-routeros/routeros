@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	api "github.com/go-routeros/routeros"
+	"gopkg.in/routeros.v1"
 )
 
 var (
@@ -22,7 +22,7 @@ var (
 func main() {
 	flag.Parse()
 
-	c := &api.Client{
+	c := &routeros.Client{
 		Address:  *address,
 		Username: *username,
 		Password: *password,
@@ -46,7 +46,7 @@ func main() {
 	}
 }
 
-func explicitAsync(c *api.Client) {
+func explicitAsync(c *routeros.Client) {
 	errC := c.Async()
 
 	go func() {
@@ -85,7 +85,7 @@ func explicitAsync(c *api.Client) {
 	}
 }
 
-func implicitAsync(c *api.Client) {
+func implicitAsync(c *routeros.Client) {
 	l, err := c.ListenArgs(strings.Split(*command, " "))
 	if err != nil {
 		log.Fatal(err)

@@ -5,7 +5,7 @@ import (
 	"log"
 	"strings"
 
-	api "github.com/go-routeros/routeros"
+	"gopkg.in/routeros.v1"
 )
 
 var (
@@ -20,7 +20,7 @@ var (
 func main() {
 	flag.Parse()
 
-	c := &api.Client{
+	c := &routeros.Client{
 		Address:  *address,
 		Username: *username,
 		Password: *password,
