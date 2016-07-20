@@ -58,7 +58,7 @@ func (c *Client) ConnectTLS(tlsConfig *tls.Config) error {
 
 // Close closes the connection to the RouterOS device.
 func (c *Client) Close() {
-	if c.conn == nil {
+	if c.conn == nil || c.closing {
 		return
 	}
 	c.closing = true
