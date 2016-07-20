@@ -7,7 +7,7 @@ import (
 	"github.com/go-routeros/routeros/proto"
 )
 
-// Reply has all lines from a reply. They all have the same .tag value.
+// Reply has all the sentences from a reply.
 type Reply struct {
 	Re   []*proto.Sentence
 	Done *proto.Sentence

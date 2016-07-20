@@ -17,7 +17,6 @@ func (c *Client) Run(sentence ...string) (*Reply, error) {
 }
 
 // RunArgs sends a sentence to the RouterOS device and waits for the reply.
-// It returns the reply after it’s been fully received.
 func (c *Client) RunArgs(sentence []string) (*Reply, error) {
 	c.w.BeginSentence()
 	for _, word := range sentence {
