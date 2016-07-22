@@ -188,10 +188,10 @@ func TestReceive(t *testing.T) {
 		in  []*proto.Sentence
 		out string
 	}{
-		{r(s("!trap")), `RouterOS: unknown error: !trap []`},
-		{r(s("!trap", "=message=abc123")), `RouterOS: abc123`},
-		{r(s("!fatal")), `RouterOS: unknown error: !fatal []`},
-		{r(s("!fatal", "=message=abc123")), `RouterOS: abc123`},
+		{r(s("!trap")), `from RouterOS device: unknown error: !trap []`},
+		{r(s("!trap", "=message=abc123")), `from RouterOS device: abc123`},
+		{r(s("!fatal")), `from RouterOS device: unknown error: !fatal []`},
+		{r(s("!fatal", "=message=abc123")), `from RouterOS device: abc123`},
 	} {
 		c := newSentenceTester(test.in)
 		_, err := c.readReply()

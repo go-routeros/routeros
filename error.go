@@ -2,7 +2,6 @@ package routeros
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/go-routeros/routeros/proto"
 )
@@ -18,7 +17,7 @@ type UnknownReplyError struct {
 }
 
 func (err *UnknownReplyError) Error() string {
-	return fmt.Sprintf("unknown RouterOS reply word: %s", err.Sentence.Word)
+	return "unknown RouterOS reply word: " + err.Sentence.Word
 }
 
 // DeviceError records the sentence containing the error received from the device.
@@ -30,7 +29,7 @@ type DeviceError struct {
 func (err *DeviceError) Error() string {
 	m := err.Sentence.Map["message"]
 	if m == "" {
-		m = fmt.Sprintf("unknown error: %s", err.Sentence)
+		m = "unknown error: " + err.Sentence.String()
 	}
-	return fmt.Sprintf("RouterOS: %s", m)
+	return "from RouterOS device: " + m
 }
