@@ -49,8 +49,8 @@ func (c *Client) endCommandAsync() (*asyncReply, error) {
 	a.tag = fmt.Sprintf("r%d", c.nextTag)
 	c.w.WriteWord(".tag=" + a.tag)
 
-	c.Lock()
-	defer c.Unlock()
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
 	err := c.w.EndSentence()
 	if err != nil {

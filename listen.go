@@ -53,8 +53,8 @@ func (c *Client) ListenArgsQueue(sentence []string, queueSize int) (*ListenReply
 	}
 	c.w.WriteWord(".tag=" + l.tag)
 
-	c.Lock()
-	defer c.Unlock()
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
 	err := c.w.EndSentence()
 	if err != nil {

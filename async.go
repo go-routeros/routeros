@@ -12,8 +12,8 @@ type replyCloser interface {
 
 // Async starts asynchronous mode and returns immediately.
 func (c *Client) Async() <-chan error {
-	c.Lock()
-	defer c.Unlock()
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
 	errC := make(chan error, 1)
 	if c.async {
@@ -45,26 +45,26 @@ func (c *Client) asyncLoop() error {
 			return err
 		}
 
-		c.Lock()
+		c.mu.Lock()
 		r, ok := c.tags[sen.Tag]
-		c.Unlock()
+		c.mu.Unlock()
 		if !ok {
 			continue
 		}
 
 		done, err := r.processSentence(sen)
 		if done || err != nil {
-			c.Lock()
+			c.mu.Lock()
 			delete(c.tags, sen.Tag)
-			c.Unlock()
+			c.mu.Unlock()
 			closeReply(r, err)
 		}
 	}
 }
 
 func (c *Client) closeTags(err error) {
-	c.Lock()
-	defer c.Unlock()
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
 	for _, r := range c.tags {
 		closeReply(r, err)

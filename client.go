@@ -27,7 +27,7 @@ type Client struct {
 	async   bool
 	nextTag int64
 	tags    map[string]sentenceProcessor
-	sync.Mutex
+	mu      sync.Mutex
 }
 
 // NewClient returns a new Client over rwc. Login must be called.
