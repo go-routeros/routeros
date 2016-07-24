@@ -17,20 +17,17 @@ var (
 	useTLS   = flag.Bool("tls", false, "Use TLS")
 )
 
+func dial() (*routeros.Client, error) {
+	if *useTLS {
+		return routeros.DialTLS(*address, *username, *password, nil)
+	}
+	return routeros.Dial(*address, *username, *password)
+}
+
 func main() {
 	flag.Parse()
 
-	c := &routeros.Client{
-		Address:  *address,
-		Username: *username,
-		Password: *password,
-	}
-	var err error
-	if *useTLS {
-		err = c.ConnectTLS(nil)
-	} else {
-		err = c.Connect()
-	}
+	c, err := dial()
 	if err != nil {
 		log.Fatal(err)
 	}

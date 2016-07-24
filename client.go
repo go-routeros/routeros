@@ -18,68 +18,70 @@ import (
 
 // Client is a RouterOS API client.
 type Client struct {
-	Address  string
-	Username string
-	Password string
-	Queue    int
-	conn     net.Conn
-	r        proto.Reader
-	w        *proto.Writer
-	closing  bool
-	async    bool
-	nextTag  int64
-	tags     map[string]sentenceProcessor
+	Queue int
+
+	rwc     io.ReadWriteCloser
+	r       proto.Reader
+	w       *proto.Writer
+	closing bool
+	async   bool
+	nextTag int64
+	tags    map[string]sentenceProcessor
 	sync.Mutex
 }
 
-// Connect connects and login to the RouterOS device.
-func (c *Client) Connect() error {
-	if c.conn != nil {
-		return errAlreadyConnected
-	}
-	conn, err := net.Dial("tcp", c.Address)
-	if err != nil {
-		return err
-	}
-	return c.connect(conn)
+// NewClient returns a new Client over rwc. Login must be called.
+func NewClient(rwc io.ReadWriteCloser) (*Client, error) {
+	return &Client{
+		rwc: rwc,
+		r:   proto.NewReader(rwc),
+		w:   proto.NewWriter(rwc),
+	}, nil
 }
 
-// ConnectTLS connects and login to the RouterOS device using TLS.
-func (c *Client) ConnectTLS(tlsConfig *tls.Config) error {
-	if c.conn != nil {
-		return errAlreadyConnected
-	}
-	conn, err := tls.Dial("tcp", c.Address, tlsConfig)
+// Dial connects and logs in to a RouterOS device.
+func Dial(address, username, password string) (*Client, error) {
+	conn, err := net.Dial("tcp", address)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return c.connect(conn)
+	return newClientAndLogin(conn, address, username, password)
+}
+
+// DialTLS connects and logs in to a RouterOS device using TLS.
+func DialTLS(address, username, password string, tlsConfig *tls.Config) (*Client, error) {
+	conn, err := tls.Dial("tcp", address, tlsConfig)
+	if err != nil {
+		return nil, err
+	}
+	return newClientAndLogin(conn, address, username, password)
+}
+
+func newClientAndLogin(rwc io.ReadWriteCloser, address, username, password string) (*Client, error) {
+	c, err := NewClient(rwc)
+	if err != nil {
+		rwc.Close()
+		return nil, err
+	}
+	err = c.Login(username, password)
+	if err != nil {
+		c.Close()
+		return nil, err
+	}
+	return c, nil
 }
 
 // Close closes the connection to the RouterOS device.
 func (c *Client) Close() {
-	if c.conn == nil || c.closing {
+	if c.closing {
 		return
 	}
 	c.closing = true
-	c.conn.Close()
+	c.rwc.Close()
 }
 
-func (c *Client) connect(conn net.Conn) error {
-	c.conn = conn
-	c.r = proto.NewReader(conn)
-	c.w = proto.NewWriter(conn)
-
-	err := c.login()
-	if err != nil {
-		c.Close()
-		return err
-	}
-
-	return nil
-}
-
-func (c *Client) login() error {
+// Login runs the /login command. Dial and DialTLS call this automatically.
+func (c *Client) Login(username, password string) error {
 	r, err := c.Run("/login")
 	if err != nil {
 		return err
@@ -93,7 +95,7 @@ func (c *Client) login() error {
 		return fmt.Errorf("RouterOS: /login: invalid ret (challenge) hex string received: %s", err)
 	}
 
-	r, err = c.Run("/login", "=name="+c.Username, "=response="+c.challengeResponse(b))
+	r, err = c.Run("/login", "=name="+username, "=response="+c.challengeResponse(b, password))
 	if err != nil {
 		return err
 	}
@@ -101,10 +103,10 @@ func (c *Client) login() error {
 	return nil
 }
 
-func (c *Client) challengeResponse(cha []byte) string {
+func (c *Client) challengeResponse(cha []byte, password string) string {
 	h := md5.New()
 	h.Write([]byte{0})
-	io.WriteString(h, c.Password)
+	io.WriteString(h, password)
 	h.Write(cha)
 	return fmt.Sprintf("00%x", h.Sum(nil))
 }

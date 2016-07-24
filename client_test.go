@@ -30,12 +30,8 @@ func (t *liveTest) connect() {
 	if *routerosAddress == "" {
 		t.Skip("Flag -routeros.address not set")
 	}
-	t.c = &Client{
-		Address:  *routerosAddress,
-		Username: *routerosUsername,
-		Password: *routerosPassword,
-	}
-	err := t.c.Connect()
+	var err error
+	t.c, err = Dial(*routerosAddress, *routerosUsername, *routerosPassword)
 	if err != nil {
 		t.Fatal(err)
 	}
