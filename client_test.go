@@ -116,6 +116,7 @@ func TestReceive(t *testing.T) {
 			w.WriteWord(word)
 		}
 		w.WriteWord("")
+		w.Flush()
 		r := proto.NewReader(b)
 		sen, err := r.ReadSentence()
 		if err != nil {

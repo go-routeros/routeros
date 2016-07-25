@@ -1,6 +1,7 @@
 package proto
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"io"
@@ -12,12 +13,12 @@ type Reader interface {
 }
 
 type reader struct {
-	io.Reader
+	*bufio.Reader
 }
 
 // NewReader returns a new Reader to read from r.
 func NewReader(r io.Reader) Reader {
-	return &reader{r}
+	return &reader{bufio.NewReader(r)}
 }
 
 // ReadSentence reads a RouterOS sentence.

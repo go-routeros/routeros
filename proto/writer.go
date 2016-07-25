@@ -1,6 +1,7 @@
 package proto
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"sync"
@@ -8,14 +9,14 @@ import (
 
 // Writer writes words to a RouterOS device.
 type Writer struct {
-	io.Writer
+	*bufio.Writer
 	err error
 	sync.Mutex
 }
 
 // NewWriter returns a new Writer to write to w.
 func NewWriter(w io.Writer) *Writer {
-	return &Writer{Writer: w}
+	return &Writer{Writer: bufio.NewWriter(w)}
 }
 
 // Err returns the last error that occurred on this Writer.
@@ -31,6 +32,7 @@ func (w *Writer) BeginSentence() {
 // EndSentence writes an empty word and calls Unlock(). It returns Err().
 func (w *Writer) EndSentence() error {
 	w.WriteWord("")
+	w.Flush()
 	err := w.err
 	w.Unlock()
 	return err
