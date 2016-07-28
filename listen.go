@@ -60,6 +60,9 @@ func (c *Client) ListenArgsQueue(sentence []string, queueSize int) (*ListenReply
 	if err != nil {
 		return nil, err
 	}
+	if c.tags == nil {
+		return nil, errAsyncLoopEnded
+	}
 	c.tags[l.tag] = l
 	return l, nil
 }

@@ -56,6 +56,9 @@ func (c *Client) endCommandAsync() (*asyncReply, error) {
 	if err != nil {
 		return nil, err
 	}
+	if c.tags == nil {
+		return nil, errAsyncLoopEnded
+	}
 	c.tags[a.tag] = a
 	return a, nil
 }

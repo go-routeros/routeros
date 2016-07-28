@@ -7,7 +7,8 @@ import (
 )
 
 var (
-	errAlreadyAsync = errors.New("Async() has already been called")
+	errAlreadyAsync   = errors.New("Async() has already been called")
+	errAsyncLoopEnded = errors.New("Async() loop has ended - probably read error")
 )
 
 // UnknownReplyError records the sentence whose Word is unknown.
