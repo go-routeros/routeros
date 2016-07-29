@@ -22,5 +22,5 @@ func NewSentence() *Sentence {
 }
 
 func (sen *Sentence) String() string {
-	return fmt.Sprintf("%s %#q", sen.Word, sen.List)
+	return fmt.Sprintf("%s @%s %#q", sen.Word, sen.Tag, sen.List)
 }

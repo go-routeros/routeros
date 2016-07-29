@@ -1,12 +1,8 @@
 package routeros
 
 import (
-	"bytes"
 	"flag"
-	"io"
 	"testing"
-
-	"github.com/go-routeros/routeros/proto"
 )
 
 var (
@@ -86,120 +82,39 @@ func TestRunError(tt *testing.T) {
 	}
 }
 
-type sentenceTester struct {
-	sentences []*proto.Sentence
+func TestDialInvalidPort(t *testing.T) {
+	c, err := Dial("127.0.0.1:xxx", "x", "x")
+	if err == nil {
+		c.Close()
+		t.Fatalf("Dial succeeded; want error")
+	}
+	if err.Error() != "dial tcp: lookup tcp/xxx: getaddrinfow: The specified class was not found." {
+		t.Fatal(err)
+	}
 }
 
-func newSentenceTester(sentences []*proto.Sentence) *Client {
-	return &Client{r: &sentenceTester{sentences}}
+func TestDialTLSInvalidPort(t *testing.T) {
+	c, err := DialTLS("127.0.0.1:xxx", "x", "x", nil)
+	if err == nil {
+		c.Close()
+		t.Fatalf("Dial succeeded; want error")
+	}
+	if err.Error() != "dial tcp: lookup tcp/xxx: getaddrinfow: The specified class was not found." {
+		t.Fatal(err)
+	}
 }
 
-func (p *sentenceTester) ReadSentence() (*proto.Sentence, error) {
-	if len(p.sentences) == 0 {
-		return nil, io.EOF
+func TestInvalidLogin(t *testing.T) {
+	if *routerosAddress == "" {
+		t.Skip("Flag -routeros.address not set")
 	}
-	s := p.sentences[0]
-	p.sentences = p.sentences[1:]
-	return s, nil
-}
-
-func TestReceive(t *testing.T) {
-	// Return a list of sentences.
-	r := func(sentences ...*proto.Sentence) []*proto.Sentence {
-		return sentences
+	var err error
+	c, err := Dial(*routerosAddress, "xxx", "APasswordThatWillNeverExistir")
+	if err == nil {
+		c.Close()
+		t.Fatalf("Dial succeeded; want error")
 	}
-	// Return one sentence.
-	s := func(words ...string) *proto.Sentence {
-		b := &bytes.Buffer{}
-		w := proto.NewWriter(b)
-		for _, word := range words {
-			w.WriteWord(word)
-		}
-		w.WriteWord("")
-		w.Flush()
-		r := proto.NewReader(b)
-		sen, err := r.ReadSentence()
-		if err != nil {
-			t.Fatalf("ReadSentence(%#q)=%#v", words, err)
-		}
-		return sen
-	}
-	// Valid replies.
-	for i, test := range []struct {
-		in  []*proto.Sentence
-		out string
-	}{
-		{r(s("!done")), `!done []`},
-		{r(s(), s("!done")), `!done []`},
-		{r(s("!done", "=name")), "!done [{`name` ``}]"},
-		{r(s("!done", "=ret=abc123")), "!done [{`ret` `abc123`}]"},
-		{r(s("!re", "=name=value"), s("!done")), "!re [{`name` `value`}]\n!done []"},
-	} {
-		c := newSentenceTester(test.in)
-		reply, err := c.readReply()
-		if err != nil {
-			t.Errorf("#%d: Input(%#q)=%#v", i, test.in, err)
-			continue
-		}
-		x := reply.String()
-		if x != test.out {
-			t.Errorf("#%d: Input(%#q)=%#q; want %#q", i, test.in, x, test.out)
-		}
-	}
-	// Must return EOF.
-	for i, test := range []struct {
-		in []*proto.Sentence
-	}{
-		{r()},
-		{r(s())},
-		{r(s("!re", "=name=value"))},
-	} {
-		c := newSentenceTester(test.in)
-		_, err := c.readReply()
-		if err != io.EOF {
-			t.Errorf("#%d: Input(%#q)=%s; want EOF", i, test.in, err)
-		}
-	}
-	// Must return ErrUnknownReply.
-	for i, test := range []struct {
-		in  []*proto.Sentence
-		out string
-	}{
-		{r(s("=name")), `unknown RouterOS reply word: =name`},
-		{r(s("=ret=abc123")), `unknown RouterOS reply word: =ret=abc123`},
-	} {
-		c := newSentenceTester(test.in)
-		_, err := c.readReply()
-		_, ok := err.(*UnknownReplyError)
-		if !ok {
-			t.Errorf("#%d: Input(%#q)=%T; want *UnknownReplyError", i, test.in, err)
-			continue
-		}
-		x := err.Error()
-		if x != test.out {
-			t.Errorf("#%d: Input(%#q)=%#q; want %#q", i, test.in, x, test.out)
-		}
-	}
-	// Must return ErrFromDevice.
-	for i, test := range []struct {
-		in  []*proto.Sentence
-		out string
-	}{
-		{r(s("!trap")), `from RouterOS device: unknown error: !trap []`},
-		{r(s("!trap", "=message=abc123")), `from RouterOS device: abc123`},
-		{r(s("!fatal")), `from RouterOS device: unknown error: !fatal []`},
-		{r(s("!fatal", "=message=abc123")), `from RouterOS device: abc123`},
-	} {
-		c := newSentenceTester(test.in)
-		_, err := c.readReply()
-		_, ok := err.(*DeviceError)
-		if !ok {
-			t.Errorf("#%d: Input(%#q)=%T; want *DeviceError", i, test.in, err)
-			continue
-		}
-		x := err.Error()
-		if x != test.out {
-			t.Errorf("#%d: Input(%#q)=%#q; want %#q", i, test.in, x, test.out)
-		}
+	if err.Error() != "from RouterOS device: cannot log in" {
+		t.Fatal(err)
 	}
 }

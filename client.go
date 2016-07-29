@@ -22,7 +22,7 @@ type Client struct {
 
 	rwc     io.ReadWriteCloser
 	r       proto.Reader
-	w       *proto.Writer
+	w       proto.Writer
 	closing bool
 	async   bool
 	nextTag int64

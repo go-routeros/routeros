@@ -7,7 +7,7 @@ import (
 	"io"
 )
 
-// Reader reads RouterOS tokens from another reader.
+// Reader reads sentences from a RouterOS device.
 type Reader interface {
 	ReadSentence() (*Sentence, error)
 }
@@ -21,7 +21,7 @@ func NewReader(r io.Reader) Reader {
 	return &reader{bufio.NewReader(r)}
 }
 
-// ReadSentence reads a RouterOS sentence.
+// ReadSentence reads a sentence.
 func (r *reader) ReadSentence() (*Sentence, error) {
 	sen := NewSentence()
 	for {

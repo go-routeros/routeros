@@ -2,72 +2,68 @@ package proto
 
 import (
 	"bufio"
-	"fmt"
 	"io"
 	"sync"
 )
 
 // Writer writes words to a RouterOS device.
-type Writer struct {
+type Writer interface {
+	BeginSentence()
+	WriteWord(word string)
+	EndSentence() error
+}
+
+type writer struct {
 	*bufio.Writer
 	err error
 	sync.Mutex
 }
 
 // NewWriter returns a new Writer to write to w.
-func NewWriter(w io.Writer) *Writer {
-	return &Writer{Writer: bufio.NewWriter(w)}
+func NewWriter(w io.Writer) Writer {
+	return &writer{Writer: bufio.NewWriter(w)}
 }
 
-// Err returns the last error that occurred on this Writer.
-func (w *Writer) Err() error {
-	return w.err
-}
-
-// BeginSentence simply calls Lock().
-func (w *Writer) BeginSentence() {
+// BeginSentence prepares w for writing a sentence.
+func (w *writer) BeginSentence() {
 	w.Lock()
 }
 
-// EndSentence writes an empty word and calls Unlock(). It returns Err().
-func (w *Writer) EndSentence() error {
+// EndSentence writes the end-of-sentence marker (an empty word).
+// It returns the first error that occurred on calls to methods on w.
+func (w *writer) EndSentence() error {
 	w.WriteWord("")
-	w.Flush()
+	w.flush()
 	err := w.err
 	w.Unlock()
 	return err
 }
 
-// Printf formats the string and sends it using WriteWord.
-func (w *Writer) Printf(format string, a ...interface{}) {
-	word := fmt.Sprintf(format, a...)
-	w.WriteWord(word)
+// WriteWord writes one word.
+func (w *writer) WriteWord(word string) {
+	b := []byte(word)
+	w.write(encodeLength(len(b)))
+	w.write(b)
 }
 
-// WriteWord writes one RouterOS word.
-func (w *Writer) WriteWord(word string) {
-	w.writeBytes([]byte(word))
-}
-
-func (w *Writer) writeBytes(word []byte) {
+func (w *writer) flush() {
 	if w.err != nil {
 		return
 	}
-	err := w.writeLength(len(word))
+	err := w.Flush()
 	if err != nil {
 		w.err = err
-		return
-	}
-	_, err = w.Write(word)
-	if err != nil {
-		w.err = err
-		return
 	}
 }
 
-func (w *Writer) writeLength(l int) error {
-	_, err := w.Write(encodeLength(l))
-	return err
+func (w *writer) write(b []byte) {
+	if w.err != nil {
+		return
+	}
+	_, err := w.Write(b)
+	if err != nil {
+		w.err = err
+	}
 }
 
 func encodeLength(l int) []byte {
