@@ -73,10 +73,13 @@ func newClientAndLogin(rwc io.ReadWriteCloser, address, username, password strin
 
 // Close closes the connection to the RouterOS device.
 func (c *Client) Close() {
+	c.mu.Lock()
 	if c.closing {
+		c.mu.Unlock()
 		return
 	}
 	c.closing = true
+	c.mu.Unlock()
 	c.rwc.Close()
 }
 

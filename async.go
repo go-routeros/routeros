@@ -32,8 +32,13 @@ func (c *Client) asyncLoopChan(errC chan<- error) {
 	// If c.Close() has been called, c.closing will be true, and
 	// err will be “use of closed network connection”. Ignore that error.
 	err := c.asyncLoop()
-	if err != nil && !c.closing {
-		errC <- err
+	if err != nil {
+		c.mu.Lock()
+		closing := c.closing
+		c.mu.Unlock()
+		if !closing {
+			errC <- err
+		}
 	}
 }
 
