@@ -5,7 +5,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/go-routeros/routeros"
+	"gopkg.in/routeros.v2"
 )
 
 var (

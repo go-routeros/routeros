@@ -1,6 +1,6 @@
 package routeros
 
-import "github.com/go-routeros/routeros/proto"
+import "gopkg.in/routeros.v2/proto"
 
 type sentenceProcessor interface {
 	processSentence(sen *proto.Sentence) (bool, error)
