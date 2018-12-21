@@ -12,6 +12,7 @@ import (
 	"io"
 	"net"
 	"sync"
+	"time"
 
 	"github.com/go-routeros/routeros/proto"
 )
@@ -49,12 +50,18 @@ func Dial(address, username, password string) (*Client, error) {
 }
 
 // DialTLS connects and logs in to a RouterOS device using TLS.
-func DialTLS(address, username, password string, tlsConfig *tls.Config) (*Client, error) {
-	conn, err := tls.Dial("tcp", address, tlsConfig)
+func DialTLS(address, username, password string, tlsConfig *tls.Config, timeout time.Duration) (*Client, error) {
+	conn, err := net.DialTimeout("tcp", address, timeout)
 	if err != nil {
 		return nil, err
 	}
-	return newClientAndLogin(conn, address, username, password)
+
+	tlsConn := tls.Client(conn, tlsConfig)
+	if err := tlsConn.Handshake(); err != nil {
+		return nil, err
+	}
+
+	return newClientAndLogin(tlsConn, address, username, password)
 }
 
 func newClientAndLogin(rwc io.ReadWriteCloser, address, username, password string) (*Client, error) {
