@@ -1,6 +1,7 @@
 package routeros
 
 import (
+	"context"
 	"flag"
 	"strings"
 	"testing"
@@ -128,6 +129,35 @@ func TestDialTLSTimeout(t *testing.T) {
 	if !strings.Contains(err.Error(), "i/o timeout") {
 		t.Fatalf("DialTLSTimeout: Timeout expected in err. Has: %s", err)
 	}
+}
+
+func TestDialContext(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
+	go func() {
+		c, err := DialContext(ctx, "127.0.0.1:8729", "x", "x", time.Second)
+		if err != nil {
+			t.Fatalf("DialContext: Connection timeout. Has: %s", err)
+		}
+		defer c.Close()
+
+		for i := 0; i < 6; i++ {
+			_, err := c.Run("/system/resource/print")
+			if i > 1 && err == nil {
+				t.Fatalf("DialContext third command succeded; want error; should be closed")
+			}
+			if err != nil {
+				t.Fatalf("DialContext: Unexpected err: %s", err)
+			}
+			time.Sleep(time.Second * 1)
+		}
+	}()
+
+	select {
+	case <-time.After(time.Second * 2):
+		cancel()
+	}
+
+	time.Sleep(time.Second * 3)
 }
 
 func TestInvalidLogin(t *testing.T) {

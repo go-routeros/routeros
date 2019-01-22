@@ -4,6 +4,7 @@ Package routeros is a pure Go client library for accessing Mikrotik devices usin
 package routeros
 
 import (
+	"context"
 	"crypto/md5"
 	"crypto/tls"
 	"encoding/hex"
@@ -21,14 +22,16 @@ import (
 type Client struct {
 	Queue int
 
-	rwc     io.ReadWriteCloser
-	r       proto.Reader
-	w       proto.Writer
-	closing bool
-	async   bool
-	nextTag int64
-	tags    map[string]sentenceProcessor
-	mu      sync.Mutex
+	rwc        io.ReadWriteCloser
+	r          proto.Reader
+	w          proto.Writer
+	closing    bool
+	async      bool
+	nextTag    int64
+	tags       map[string]sentenceProcessor
+	mu         sync.Mutex
+	useContext bool
+	ctxCh      chan interface{}
 }
 
 // NewClient returns a new Client over rwc. Login must be called.
@@ -49,13 +52,28 @@ func Dial(address, username, password string) (*Client, error) {
 	return newClientAndLogin(conn, address, username, password)
 }
 
-// Dial connects and logs in to a RouterOS device.
+// DialTimeout acts like Dial but takes a timeout.
 func DialTimeout(address, username, password string, timeout time.Duration) (*Client, error) {
 	conn, err := net.DialTimeout("tcp", address, timeout)
 	if err != nil {
 		return nil, err
 	}
 	return newClientAndLogin(conn, address, username, password)
+}
+
+// DialContext acts like DialTimeout but takes a context.
+//
+// If context is canceled, the connection will be forcibly closed. This will
+// allow to cancel a connection even when the buffer is blocked and won't free.
+func DialContext(ctx context.Context, address, username, password string, timeout time.Duration) (*Client, error) {
+	var dialer = net.Dialer{
+		Timeout: timeout,
+	}
+	conn, err := dialer.DialContext(ctx, "tcp", address)
+	if err != nil {
+		return nil, err
+	}
+	return newClientAndLoginWithContext(ctx, conn, address, username, password)
 }
 
 // DialTLS connects and logs in to a RouterOS device using TLS.
@@ -79,8 +97,21 @@ func DialTLSTimeout(address, username, password string, tlsConfig *tls.Config, t
 	return newClientAndLogin(conn, address, username, password)
 }
 
-func newClientAndLogin(rwc io.ReadWriteCloser, address, username, password string) (*Client, error) {
+func newClientAndLoginWithContext(ctx context.Context, rwc io.ReadWriteCloser, address, username, password string) (*Client, error) {
 	c, err := NewClient(rwc)
+	if ctx != nil {
+		c.useContext = true
+		c.ctxCh = make(chan interface{})
+
+		go func() {
+			select {
+			case <-ctx.Done():
+				rwc.Close()
+			case <-c.ctxCh:
+				return
+			}
+		}()
+	}
 	if err != nil {
 		rwc.Close()
 		return nil, err
@@ -93,6 +124,10 @@ func newClientAndLogin(rwc io.ReadWriteCloser, address, username, password strin
 	return c, nil
 }
 
+func newClientAndLogin(rwc io.ReadWriteCloser, address, username, password string) (*Client, error) {
+	return newClientAndLoginWithContext(nil, rwc, address, username, password)
+}
+
 // Close closes the connection to the RouterOS device.
 func (c *Client) Close() {
 	c.mu.Lock()
@@ -103,6 +138,9 @@ func (c *Client) Close() {
 	c.closing = true
 	c.mu.Unlock()
 	c.rwc.Close()
+	if c.useContext {
+		c.ctxCh <- nil
+	}
 }
 
 // Login runs the /login command. Dial and DialTLS call this automatically.
