@@ -9,13 +9,13 @@ import (
 	"gopkg.in/routeros.v2/proto"
 )
 
-func TestLogin(t *testing.T) {
+func TestLoginPre643(t *testing.T) {
 	c, s := newPair(t)
 	defer c.Close()
 
 	go func() {
 		defer s.Close()
-		s.readSentence(t, "/login @ []")
+		s.readSentence(t, "/login @ [{`name` `userTest`} {`password` `passTest`}]")
 		s.writeSentence(t, "!done", "=ret=abc123")
 		s.readSentence(t, "/login @ [{`name` `userTest`} {`response` `0021277bff9ac7caf06aa608e46616d47f`}]")
 		s.writeSentence(t, "!done")
@@ -27,13 +27,29 @@ func TestLogin(t *testing.T) {
 	}
 }
 
-func TestLoginIncorrect(t *testing.T) {
+func TestLoginPost643(t *testing.T) {
 	c, s := newPair(t)
 	defer c.Close()
 
 	go func() {
 		defer s.Close()
-		s.readSentence(t, "/login @ []")
+		s.readSentence(t, "/login @ [{`name` `userTest`} {`password` `passTest`}]")
+		s.writeSentence(t, "!done")
+	}()
+
+	err := c.Login("userTest", "passTest")
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestLoginIncorrectPre643(t *testing.T) {
+	c, s := newPair(t)
+	defer c.Close()
+
+	go func() {
+		defer s.Close()
+		s.readSentence(t, "/login @ [{`name` `userTest`} {`password` `passTest`}]")
 		s.writeSentence(t, "!done", "=ret=abc123")
 		s.readSentence(t, "/login @ [{`name` `userTest`} {`response` `0021277bff9ac7caf06aa608e46616d47f`}]")
 		s.writeSentence(t, "!trap", "=message=incorrect login")
@@ -48,21 +64,21 @@ func TestLoginIncorrect(t *testing.T) {
 	}
 }
 
-func TestLoginNoChallenge(t *testing.T) {
+func TestLoginIncorrectPost643(t *testing.T) {
 	c, s := newPair(t)
 	defer c.Close()
 
 	go func() {
 		defer s.Close()
-		s.readSentence(t, "/login @ []")
-		s.writeSentence(t, "!done")
+		s.readSentence(t, "/login @ [{`name` `userTest`} {`password` `passTest`}]")
+		s.writeSentence(t, "!trap", "=message=incorrect login")
 	}()
 
 	err := c.Login("userTest", "passTest")
 	if err == nil {
 		t.Fatalf("Login succeeded; want error")
 	}
-	if err.Error() != "RouterOS: /login: no ret (challenge) received" {
+	if err.Error() != "from RouterOS device: incorrect login" {
 		t.Fatal(err)
 	}
 }
@@ -73,7 +89,7 @@ func TestLoginInvalidChallenge(t *testing.T) {
 
 	go func() {
 		defer s.Close()
-		s.readSentence(t, "/login @ []")
+		s.readSentence(t, "/login @ [{`name` `userTest`} {`password` `passTest`}]")
 		s.writeSentence(t, "!done", "=ret=Invalid Hex String")
 	}()
 
