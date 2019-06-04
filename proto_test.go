@@ -1,7 +1,6 @@
 package routeros_test
 
 import (
-	"fmt"
 	"io"
 	"testing"
 
@@ -166,7 +165,7 @@ func TestRunWithListen(t *testing.T) {
 
 	sen := <-listen.Chan()
 	want := "!re @l1 [{`address` `1.2.3.4/32`}]"
-	if fmt.Sprintf("%s", sen) != want {
+	if sen.String() != want {
 		t.Fatalf("/ip/address (%s); want (%s)", sen, want)
 	}
 
@@ -377,7 +376,7 @@ func TestListen(t *testing.T) {
 
 	sen := <-reC
 	want := "!re @l1 [{`address` `1.2.3.4/32`}]"
-	if fmt.Sprintf("%s", sen) != want {
+	if sen.String() != want {
 		t.Fatalf("/ip/address/listen (%s); want (%s)", sen, want)
 	}
 
