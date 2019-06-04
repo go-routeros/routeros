@@ -85,14 +85,20 @@ func (c *Client) Close() {
 
 // Login runs the /login command. Dial and DialTLS call this automatically.
 func (c *Client) Login(username, password string) error {
-	r, err := c.Run("/login")
+	r, err := c.Run("/login", "=name="+username, "=password="+password)
 	if err != nil {
 		return err
 	}
 	ret, ok := r.Done.Map["ret"]
 	if !ok {
+		// Login method post-6.43 one stage, cleartext and no challenge
+		if r.Done != nil {
+			return nil
+		}
 		return errors.New("RouterOS: /login: no ret (challenge) received")
 	}
+
+	// Login method pre-6.43 two stages, challenge
 	b, err := hex.DecodeString(ret)
 	if err != nil {
 		return fmt.Errorf("RouterOS: /login: invalid ret (challenge) hex string received: %s", err)
