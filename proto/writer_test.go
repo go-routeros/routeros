@@ -17,7 +17,7 @@ func TestEncodeLength(t *testing.T) {
 		{0x10000080, []byte{0xF0, 0x10, 0x00, 0x00, 0x80}},
 	} {
 		b := encodeLength(d.length)
-		if bytes.Compare(b, d.rawBytes) != 0 {
+		if !bytes.Equal(b, d.rawBytes) {
 			t.Fatalf("Expected output %#v for len=%d, got %#v", d.rawBytes, d.length, b)
 		}
 	}
