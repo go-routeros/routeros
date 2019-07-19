@@ -90,7 +90,8 @@ func TestDialInvalidPort(t *testing.T) {
 		c.Close()
 		t.Fatalf("Dial succeeded; want error")
 	}
-	if err.Error() != "dial tcp: lookup tcp/xxx: getaddrinfow: The specified class was not found." {
+	if err.Error() != "dial tcp: lookup tcp/xxx: getaddrinfow: The specified class was not found." &&
+		err.Error() != "dial tcp: lookup tcp/xxx: Servname not supported for ai_socktype" {
 		t.Fatal(err)
 	}
 }
@@ -101,7 +102,8 @@ func TestDialTLSInvalidPort(t *testing.T) {
 		c.Close()
 		t.Fatalf("Dial succeeded; want error")
 	}
-	if err.Error() != "dial tcp: lookup tcp/xxx: getaddrinfow: The specified class was not found." {
+	if err.Error() != "dial tcp: lookup tcp/xxx: getaddrinfow: The specified class was not found." &&
+		err.Error() != "dial tcp: lookup tcp/xxx: Servname not supported for ai_socktype" {
 		t.Fatal(err)
 	}
 }
@@ -140,7 +142,8 @@ func TestInvalidLogin(t *testing.T) {
 		c.Close()
 		t.Fatalf("Dial succeeded; want error")
 	}
-	if err.Error() != "from RouterOS device: cannot log in" {
+	if err.Error() != "from RouterOS device: cannot log in" &&
+		err.Error() != "from RouterOS device: invalid user name or password (6)" {
 		t.Fatal(err)
 	}
 }
