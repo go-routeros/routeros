@@ -46,7 +46,7 @@ func Dial(address, username, password string) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newClientAndLogin(conn, address, username, password)
+	return newClientAndLogin(conn, username, password)
 }
 
 // Dial connects and logs in to a RouterOS device.
@@ -55,7 +55,7 @@ func DialTimeout(address, username, password string, timeout time.Duration) (*Cl
 	if err != nil {
 		return nil, err
 	}
-	return newClientAndLogin(conn, address, username, password)
+	return newClientAndLogin(conn, username, password)
 }
 
 // DialTLS connects and logs in to a RouterOS device using TLS.
@@ -64,7 +64,7 @@ func DialTLS(address, username, password string, tlsConfig *tls.Config) (*Client
 	if err != nil {
 		return nil, err
 	}
-	return newClientAndLogin(conn, address, username, password)
+	return newClientAndLogin(conn, username, password)
 }
 
 // DialTLSTimeout connects and logs in to a RouterOS device using TLS with timeout.
@@ -76,10 +76,10 @@ func DialTLSTimeout(address, username, password string, tlsConfig *tls.Config, t
 	if err != nil {
 		return nil, err
 	}
-	return newClientAndLogin(conn, address, username, password)
+	return newClientAndLogin(conn, username, password)
 }
 
-func newClientAndLogin(rwc io.ReadWriteCloser, address, username, password string) (*Client, error) {
+func newClientAndLogin(rwc io.ReadWriteCloser, username, password string) (*Client, error) {
 	c, err := NewClient(rwc)
 	if err != nil {
 		rwc.Close()
