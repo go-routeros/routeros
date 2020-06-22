@@ -12,6 +12,7 @@ import (
 	"io"
 	"net"
 	"sync"
+	"time"
 
 	"github.com/go-routeros/routeros/proto"
 )
@@ -42,6 +43,14 @@ func NewClient(rwc io.ReadWriteCloser) (*Client, error) {
 // Dial connects and logs in to a RouterOS device.
 func Dial(address, username, password string) (*Client, error) {
 	conn, err := net.Dial("tcp", address)
+	if err != nil {
+		return nil, err
+	}
+	return newClientAndLogin(conn, username, password)
+}
+
+func DialTimeout(address, username, password string) (*Client, error) {
+	conn, err := net.DialTimeout("tcp", address, 3*time.Second)
 	if err != nil {
 		return nil, err
 	}
