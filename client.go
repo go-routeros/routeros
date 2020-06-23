@@ -49,8 +49,8 @@ func Dial(address, username, password string) (*Client, error) {
 	return newClientAndLogin(conn, username, password)
 }
 
-func DialTimeout(address, username, password string) (*Client, error) {
-	conn, err := net.DialTimeout("tcp", address, 3*time.Second)
+func DialTimeout(address, username, password string, timeout time.Duration) (*Client, error) {
+	conn, err := net.DialTimeout("tcp", address, timeout)
 	if err != nil {
 		return nil, err
 	}
