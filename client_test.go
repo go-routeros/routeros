@@ -121,3 +121,16 @@ func TestInvalidLogin(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestTrapHandling(tt *testing.T) {
+	t := newLiveTest(tt)
+	defer t.c.Close()
+
+	cmd := []string{"/ip/dns/static/add", "=type=A", "=name=example.com", "=ttl=30", "=address=1.0.0.0"}
+
+	_, _ = t.c.RunArgs(cmd)
+	_, err := t.c.RunArgs(cmd)
+	if err == nil {
+		t.Fatal("Should've returned an error due to a duplicate")
+	}
+}
