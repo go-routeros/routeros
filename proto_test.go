@@ -36,6 +36,7 @@ func TestLoginIncorrect(t *testing.T) {
 		s.writeSentence(t, "!done", "=ret=abc123")
 		s.readSentence(t, "/login @ [{`name` `userTest`} {`response` `0021277bff9ac7caf06aa608e46616d47f`}]")
 		s.writeSentence(t, "!trap", "=message=incorrect login")
+		s.writeSentence(t, "!done")
 	}()
 
 	err := c.Login("userTest", "passTest")
@@ -288,6 +289,7 @@ func TestRunTrap(t *testing.T) {
 		defer s.Close()
 		s.readSentence(t, "/ip/address @ []")
 		s.writeSentence(t, "!trap", "=message=Some device error message")
+		s.writeSentence(t, "!done")
 	}()
 
 	_, err := c.Run("/ip/address")
@@ -307,6 +309,7 @@ func TestRunMesagelessTrap(t *testing.T) {
 		defer s.Close()
 		s.readSentence(t, "/ip/address @ []")
 		s.writeSentence(t, "!trap", "=some=unknown key")
+		s.writeSentence(t, "!done")
 	}()
 
 	_, err := c.Run("/ip/address")
