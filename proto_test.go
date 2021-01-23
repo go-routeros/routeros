@@ -298,7 +298,7 @@ func TestRunTrap(t *testing.T) {
 	}
 }
 
-func TestRunMesagelessTrap(t *testing.T) {
+func TestRunTrapWithoutMessage(t *testing.T) {
 	c, s := newPair(t)
 	defer c.Close()
 
