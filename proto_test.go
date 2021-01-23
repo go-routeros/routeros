@@ -14,7 +14,7 @@ func TestLogin(t *testing.T) {
 
 	go func() {
 		defer s.Close()
-		s.readSentence(t, "/login @ []")
+		s.readSentence(t, "/login @ [{`name` `userTest`} {`password` `passTest`}]")
 		s.writeSentence(t, "!done", "=ret=abc123")
 		s.readSentence(t, "/login @ [{`name` `userTest`} {`response` `0021277bff9ac7caf06aa608e46616d47f`}]")
 		s.writeSentence(t, "!done")
@@ -32,7 +32,7 @@ func TestLoginIncorrect(t *testing.T) {
 
 	go func() {
 		defer s.Close()
-		s.readSentence(t, "/login @ []")
+		s.readSentence(t, "/login @ [{`name` `userTest`} {`password` `passTest`}]")
 		s.writeSentence(t, "!done", "=ret=abc123")
 		s.readSentence(t, "/login @ [{`name` `userTest`} {`response` `0021277bff9ac7caf06aa608e46616d47f`}]")
 		s.writeSentence(t, "!trap", "=message=incorrect login")
@@ -54,15 +54,12 @@ func TestLoginNoChallenge(t *testing.T) {
 
 	go func() {
 		defer s.Close()
-		s.readSentence(t, "/login @ []")
+		s.readSentence(t, "/login @ [{`name` `userTest`} {`password` `passTest`}]")
 		s.writeSentence(t, "!done")
 	}()
 
 	err := c.Login("userTest", "passTest")
-	if err == nil {
-		t.Fatalf("Login succeeded; want error")
-	}
-	if err.Error() != "RouterOS: /login: no ret (challenge) received" {
+	if err != nil {
 		t.Fatal(err)
 	}
 }
@@ -73,7 +70,7 @@ func TestLoginInvalidChallenge(t *testing.T) {
 
 	go func() {
 		defer s.Close()
-		s.readSentence(t, "/login @ []")
+		s.readSentence(t, "/login @ [{`name` `userTest`} {`password` `passTest`}]")
 		s.writeSentence(t, "!done", "=ret=Invalid Hex String")
 	}()
 
