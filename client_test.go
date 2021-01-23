@@ -2,6 +2,7 @@ package routeros
 
 import (
 	"flag"
+	"strings"
 	"testing"
 )
 
@@ -132,5 +133,14 @@ func TestTrapHandling(tt *testing.T) {
 	_, err := t.c.RunArgs(cmd)
 	if err == nil {
 		t.Fatal("Should've returned an error due to a duplicate")
+	}
+	devErr, ok := err.(*DeviceError)
+	if !ok {
+		t.Fatal("Should've returned a DeviceError")
+	}
+	message := devErr.Sentence.Map["message"]
+	wanted := "entry already exists"
+	if !strings.Contains(message, wanted) {
+		t.Fatalf(`message=%#v; want %#v`, message, wanted)
 	}
 }
