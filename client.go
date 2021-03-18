@@ -46,7 +46,7 @@ func Dial(address, username, password string) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newClientAndLogin(conn, address, username, password)
+	return newClientAndLogin(conn, username, password)
 }
 
 // DialTLS connects and logs in to a RouterOS device using TLS.
@@ -61,10 +61,10 @@ func DialTLS(address, username, password string, tlsConfig *tls.Config, timeout 
 		return nil, err
 	}
 
-	return newClientAndLogin(tlsConn, address, username, password)
+	return newClientAndLogin(tlsConn, username, password)
 }
 
-func newClientAndLogin(rwc io.ReadWriteCloser, address, username, password string) (*Client, error) {
+func newClientAndLogin(rwc io.ReadWriteCloser, username, password string) (*Client, error) {
 	c, err := NewClient(rwc)
 	if err != nil {
 		rwc.Close()
@@ -92,14 +92,20 @@ func (c *Client) Close() {
 
 // Login runs the /login command. Dial and DialTLS call this automatically.
 func (c *Client) Login(username, password string) error {
-	r, err := c.Run("/login")
+	r, err := c.Run("/login", "=name="+username, "=password="+password)
 	if err != nil {
 		return err
 	}
 	ret, ok := r.Done.Map["ret"]
 	if !ok {
+		// Login method post-6.43 one stage, cleartext and no challenge
+		if r.Done != nil {
+			return nil
+		}
 		return errors.New("RouterOS: /login: no ret (challenge) received")
 	}
+
+	// Login method pre-6.43 two stages, challenge
 	b, err := hex.DecodeString(ret)
 	if err != nil {
 		return fmt.Errorf("RouterOS: /login: invalid ret (challenge) hex string received: %s", err)

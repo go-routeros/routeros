@@ -1,7 +1,6 @@
 package routeros_test
 
 import (
-	"fmt"
 	"io"
 	"testing"
 
@@ -15,7 +14,7 @@ func TestLogin(t *testing.T) {
 
 	go func() {
 		defer s.Close()
-		s.readSentence(t, "/login @ []")
+		s.readSentence(t, "/login @ [{`name` `userTest`} {`password` `passTest`}]")
 		s.writeSentence(t, "!done", "=ret=abc123")
 		s.readSentence(t, "/login @ [{`name` `userTest`} {`response` `0021277bff9ac7caf06aa608e46616d47f`}]")
 		s.writeSentence(t, "!done")
@@ -33,10 +32,11 @@ func TestLoginIncorrect(t *testing.T) {
 
 	go func() {
 		defer s.Close()
-		s.readSentence(t, "/login @ []")
+		s.readSentence(t, "/login @ [{`name` `userTest`} {`password` `passTest`}]")
 		s.writeSentence(t, "!done", "=ret=abc123")
 		s.readSentence(t, "/login @ [{`name` `userTest`} {`response` `0021277bff9ac7caf06aa608e46616d47f`}]")
 		s.writeSentence(t, "!trap", "=message=incorrect login")
+		s.writeSentence(t, "!done")
 	}()
 
 	err := c.Login("userTest", "passTest")
@@ -54,15 +54,12 @@ func TestLoginNoChallenge(t *testing.T) {
 
 	go func() {
 		defer s.Close()
-		s.readSentence(t, "/login @ []")
+		s.readSentence(t, "/login @ [{`name` `userTest`} {`password` `passTest`}]")
 		s.writeSentence(t, "!done")
 	}()
 
 	err := c.Login("userTest", "passTest")
-	if err == nil {
-		t.Fatalf("Login succeeded; want error")
-	}
-	if err.Error() != "RouterOS: /login: no ret (challenge) received" {
+	if err != nil {
 		t.Fatal(err)
 	}
 }
@@ -73,7 +70,7 @@ func TestLoginInvalidChallenge(t *testing.T) {
 
 	go func() {
 		defer s.Close()
-		s.readSentence(t, "/login @ []")
+		s.readSentence(t, "/login @ [{`name` `userTest`} {`password` `passTest`}]")
 		s.writeSentence(t, "!done", "=ret=Invalid Hex String")
 	}()
 
@@ -166,7 +163,7 @@ func TestRunWithListen(t *testing.T) {
 
 	sen := <-listen.Chan()
 	want := "!re @l1 [{`address` `1.2.3.4/32`}]"
-	if fmt.Sprintf("%s", sen) != want {
+	if sen.String() != want {
 		t.Fatalf("/ip/address (%s); want (%s)", sen, want)
 	}
 
@@ -289,6 +286,7 @@ func TestRunTrap(t *testing.T) {
 		defer s.Close()
 		s.readSentence(t, "/ip/address @ []")
 		s.writeSentence(t, "!trap", "=message=Some device error message")
+		s.writeSentence(t, "!done")
 	}()
 
 	_, err := c.Run("/ip/address")
@@ -300,7 +298,7 @@ func TestRunTrap(t *testing.T) {
 	}
 }
 
-func TestRunMesagelessTrap(t *testing.T) {
+func TestRunTrapWithoutMessage(t *testing.T) {
 	c, s := newPair(t)
 	defer c.Close()
 
@@ -308,6 +306,7 @@ func TestRunMesagelessTrap(t *testing.T) {
 		defer s.Close()
 		s.readSentence(t, "/ip/address @ []")
 		s.writeSentence(t, "!trap", "=some=unknown key")
+		s.writeSentence(t, "!done")
 	}()
 
 	_, err := c.Run("/ip/address")
@@ -377,7 +376,7 @@ func TestListen(t *testing.T) {
 
 	sen := <-reC
 	want := "!re @l1 [{`address` `1.2.3.4/32`}]"
-	if fmt.Sprintf("%s", sen) != want {
+	if sen.String() != want {
 		t.Fatalf("/ip/address/listen (%s); want (%s)", sen, want)
 	}
 

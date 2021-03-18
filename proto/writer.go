@@ -32,11 +32,10 @@ func (w *writer) BeginSentence() {
 // EndSentence writes the end-of-sentence marker (an empty word).
 // It returns the first error that occurred on calls to methods on w.
 func (w *writer) EndSentence() error {
+	defer w.Unlock()
 	w.WriteWord("")
 	w.flush()
-	err := w.err
-	w.Unlock()
-	return err
+	return w.err
 }
 
 // WriteWord writes one word.

@@ -2,6 +2,7 @@ package routeros
 
 import (
 	"flag"
+	"strings"
 	"testing"
 	"time"
 )
@@ -89,7 +90,8 @@ func TestDialInvalidPort(t *testing.T) {
 		c.Close()
 		t.Fatalf("Dial succeeded; want error")
 	}
-	if err.Error() != "dial tcp: lookup tcp/xxx: nodename nor servname provided, or not known" {
+	if err.Error() != "dial tcp: lookup tcp/xxx: getaddrinfow: The specified class was not found." &&
+		err.Error() != "dial tcp: lookup tcp/xxx: Servname not supported for ai_socktype" {
 		t.Fatal(err)
 	}
 }
@@ -100,7 +102,8 @@ func TestDialTLSInvalidPort(t *testing.T) {
 		c.Close()
 		t.Fatalf("Dial succeeded; want error")
 	}
-	if err.Error() != "dial tcp: lookup tcp/xxx: nodename nor servname provided, or not known" {
+	if err.Error() != "dial tcp: lookup tcp/xxx: getaddrinfow: The specified class was not found." &&
+		err.Error() != "dial tcp: lookup tcp/xxx: Servname not supported for ai_socktype" {
 		t.Fatal(err)
 	}
 }
@@ -115,7 +118,30 @@ func TestInvalidLogin(t *testing.T) {
 		c.Close()
 		t.Fatalf("Dial succeeded; want error")
 	}
-	if err.Error() != "from RouterOS device: cannot log in" {
+	if err.Error() != "from RouterOS device: cannot log in" &&
+		err.Error() != "from RouterOS device: invalid user name or password (6)" {
 		t.Fatal(err)
+	}
+}
+
+func TestTrapHandling(tt *testing.T) {
+	t := newLiveTest(tt)
+	defer t.c.Close()
+
+	cmd := []string{"/ip/dns/static/add", "=type=A", "=name=example.com", "=ttl=30", "=address=1.0.0.0"}
+
+	_, _ = t.c.RunArgs(cmd)
+	_, err := t.c.RunArgs(cmd)
+	if err == nil {
+		t.Fatal("Should've returned an error due to a duplicate")
+	}
+	devErr, ok := err.(*DeviceError)
+	if !ok {
+		t.Fatal("Should've returned a DeviceError")
+	}
+	message := devErr.Sentence.Map["message"]
+	wanted := "entry already exists"
+	if !strings.Contains(message, wanted) {
+		t.Fatalf(`message=%#v; want %#v`, message, wanted)
 	}
 }
