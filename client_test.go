@@ -4,6 +4,7 @@ import (
 	"flag"
 	"strings"
 	"testing"
+	"time"
 )
 
 var (
@@ -96,7 +97,7 @@ func TestDialInvalidPort(t *testing.T) {
 }
 
 func TestDialTLSInvalidPort(t *testing.T) {
-	c, err := DialTLS("127.0.0.1:xxx", "x", "x", nil)
+	c, err := DialTLS("127.0.0.1:xxx", "x", "x", nil, 1*time.Second)
 	if err == nil {
 		c.Close()
 		t.Fatalf("Dial succeeded; want error")
