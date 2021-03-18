@@ -20,10 +20,15 @@ func TestReadWrite(t *testing.T) {
 		buf := &bytes.Buffer{}
 		// Write sentence into buf.
 		w := NewWriter(buf)
+		w.BeginSentence()
 		for _, word := range test.in {
 			w.WriteWord(word)
 		}
-		w.WriteWord("")
+		err := w.EndSentence()
+		if err != nil {
+			t.Errorf("#%d: Input(%#q)=%#v", i, test.in, err)
+			continue
+		}
 		// Read sentence from buf.
 		r := NewReader(buf)
 		sen, err := r.ReadSentence()
