@@ -6,6 +6,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -125,7 +126,9 @@ func TestDialInvalidPort(t *testing.T) {
 
 	var e *net.DNSError
 	require.True(t, errors.As(err, &e))
-	require.Contains(t, e.Err, "unknown port")
+	require.Condition(t, func() bool {
+		return strings.Contains(e.Err, "unknown port") || strings.Contains(e.Err, "Servname not supported for ai_socktype")
+	})
 }
 
 func TestDialTimeout(t *testing.T) {
