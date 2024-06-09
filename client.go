@@ -34,7 +34,6 @@ type Client struct {
 	nextTag int64
 	tags    map[string]sentenceProcessor
 	mu      sync.Mutex
-	mw      sync.Mutex
 
 	r proto.Reader
 	w proto.Writer

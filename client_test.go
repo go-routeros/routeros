@@ -46,10 +46,9 @@ func newLiveTest(t *testing.T) *liveTest {
 
 func (t *liveTest) connect() {
 	cfg := fetchConfig(t.T)
-	ctx := context.WithValue(context.Background(), "logger", t.T)
 
 	var err error
-	t.c, err = DialContext(ctx, cfg.Address, cfg.Username, cfg.Password)
+	t.c, err = DialContext(context.Background(), cfg.Address, cfg.Username, cfg.Password)
 	require.NoError(t, err)
 }
 
@@ -69,8 +68,6 @@ func (t *liveTest) getUptime() {
 	// allow test to fail after 5 seconds if we didn't receive answer
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-
-	ctx = context.WithValue(ctx, "logger", t.T)
 
 	r := t.runContext(ctx, "/system/resource/print")
 	require.Len(t, r.Re, 1, "expected 1 response")
