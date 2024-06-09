@@ -11,17 +11,21 @@ type Writer interface {
 	BeginSentence()
 	WriteWord(word string)
 	EndSentence() error
+
+	Cancel()
+	Close()
 }
 
 type writer struct {
-	*bufio.Writer
+	*ctxWriter
+
 	err error
 	sync.Mutex
 }
 
 // NewWriter returns a new Writer to write to w.
 func NewWriter(w io.Writer) Writer {
-	return &writer{Writer: bufio.NewWriter(w)}
+	return &writer{ctxWriter: &ctxWriter{Writer: bufio.NewWriter(w), done: make(chan struct{})}}
 }
 
 // BeginSentence prepares w for writing a sentence.

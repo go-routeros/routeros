@@ -1,6 +1,10 @@
 package routeros
 
-import "github.com/go-routeros/routeros/proto"
+import (
+	"context"
+
+	"github.com/go-routeros/routeros/v3/proto"
+)
 
 type sentenceProcessor interface {
 	processSentence(sen *proto.Sentence) (bool, error)
@@ -12,6 +16,11 @@ type replyCloser interface {
 
 // Async starts asynchronous mode and returns immediately.
 func (c *Client) Async() <-chan error {
+	return c.AsyncContext(context.Background())
+}
+
+// AsyncContext starts asynchronous mode with context and returns immediately.
+func (c *Client) AsyncContext(ctx context.Context) <-chan error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -23,16 +32,16 @@ func (c *Client) Async() <-chan error {
 	}
 	c.async = true
 	c.tags = make(map[string]sentenceProcessor)
-	go c.asyncLoopChan(errC)
+	go c.asyncLoopChan(ctx, errC)
 	return errC
 }
 
-func (c *Client) asyncLoopChan(errC chan<- error) {
+func (c *Client) asyncLoopChan(ctx context.Context, errC chan<- error) {
 	defer close(errC)
+
 	// If c.Close() has been called, c.closing will be true, and
 	// err will be “use of closed network connection”. Ignore that error.
-	err := c.asyncLoop()
-	if err != nil {
+	if err := c.asyncLoop(ctx); err != nil {
 		c.mu.Lock()
 		closing := c.closing
 		c.mu.Unlock()
@@ -42,9 +51,17 @@ func (c *Client) asyncLoopChan(errC chan<- error) {
 	}
 }
 
-func (c *Client) asyncLoop() error {
+// asyncLoop - main goroutine for async mode. Read and process sentences, handle context done.
+func (c *Client) asyncLoop(ctx context.Context) error {
+	go func() {
+		<-ctx.Done()
+
+		c.r.Cancel()
+	}()
+
 	for {
 		sen, err := c.r.ReadSentence()
+
 		if err != nil {
 			c.closeTags(err)
 			return err
@@ -53,6 +70,8 @@ func (c *Client) asyncLoop() error {
 		c.mu.Lock()
 		r, ok := c.tags[sen.Tag]
 		c.mu.Unlock()
+
+		// cannot find tag for this sentence, ignore
 		if !ok {
 			continue
 		}
@@ -71,9 +90,22 @@ func (c *Client) closeTags(err error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
+	// If c.Close() has been called, c.closing will be true, and
+	// err will be “use of closed network connection”. Ignore that error.
+	if c.closing {
+		for _, r := range c.tags {
+			closeReply(r, nil)
+		}
+
+		c.tags = nil
+
+		return
+	}
+
 	for _, r := range c.tags {
 		closeReply(r, err)
 	}
+
 	c.tags = nil
 }
 
