@@ -2,13 +2,14 @@ package routeros
 
 import (
 	"errors"
+	"fmt"
 
-	"github.com/go-routeros/routeros/proto"
+	"github.com/go-routeros/routeros/v3/proto"
 )
 
 var (
-	errAlreadyAsync   = errors.New("Async() has already been called")
-	errAsyncLoopEnded = errors.New("Async() loop has ended - probably read error")
+	errAlreadyAsync   = errors.New("method Async() has already been called")
+	errAsyncLoopEnded = errors.New("method Async(): loop has ended - probably read error")
 )
 
 // UnknownReplyError records the sentence whose Word is unknown.
@@ -26,10 +27,14 @@ type DeviceError struct {
 	Sentence *proto.Sentence
 }
 
-func (err *DeviceError) Error() string {
-	m := err.Sentence.Map["message"]
-	if m == "" {
-		m = "unknown error: " + err.Sentence.String()
+func (err *DeviceError) fetchMessage() string {
+	if m := err.Sentence.Map["message"]; m != "" {
+		return m
 	}
-	return "from RouterOS device: " + m
+
+	return "unknown error: " + err.Sentence.String()
+}
+
+func (err *DeviceError) Error() string {
+	return fmt.Sprintf("from RouterOS device: %s", err.fetchMessage())
 }

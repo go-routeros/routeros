@@ -10,15 +10,19 @@ import (
 // Reader reads sentences from a RouterOS device.
 type Reader interface {
 	ReadSentence() (*Sentence, error)
+	Cancel()
+	Close()
 }
 
 type reader struct {
-	*bufio.Reader
+	*ctxReader
 }
 
 // NewReader returns a new Reader to read from r.
 func NewReader(r io.Reader) Reader {
-	return &reader{bufio.NewReader(r)}
+	return &reader{
+		ctxReader: &ctxReader{Reader: bufio.NewReader(r), done: make(chan struct{})},
+	}
 }
 
 // ReadSentence reads a sentence.

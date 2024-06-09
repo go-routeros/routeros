@@ -1,12 +1,14 @@
 package proto
 
 import (
-	"bytes"
+	"fmt"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestEncodeLength(t *testing.T) {
-	for _, d := range []struct {
+	for i, d := range []struct {
 		length   int
 		rawBytes []byte
 	}{
@@ -16,9 +18,8 @@ func TestEncodeLength(t *testing.T) {
 		{0x002acdef, []byte{0xE0, 0x2a, 0xcd, 0xef}},
 		{0x10000080, []byte{0xF0, 0x10, 0x00, 0x00, 0x80}},
 	} {
-		b := encodeLength(d.length)
-		if !bytes.Equal(b, d.rawBytes) {
-			t.Fatalf("Expected output %#v for len=%d, got %#v", d.rawBytes, d.length, b)
-		}
+		t.Run(fmt.Sprintf("#%d length=%d", i, d.length), func(t *testing.T) {
+			require.Equal(t, d.rawBytes, encodeLength(d.length), "expected bytes is wrong")
+		})
 	}
 }
