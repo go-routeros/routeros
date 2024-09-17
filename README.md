@@ -13,8 +13,11 @@ Page on the [Mikrotik Wiki](http://wiki.mikrotik.com/wiki/API_in_Go).
 Usage of `gopkg.in` was removed in favor of Go modules. Please, update you import paths to
 `github.com/go-routeros/routeros/v3`.
 
+Current version:
+[**v3 and newest**](https://github.com/go-routeros/routeros/),
+
 Old released versions:
-[**v2**](https://github.com/go-routeros/routeros/tree/v2)
+[**v2**](https://github.com/go-routeros/routeros/tree/v2),
 [**v1**](https://github.com/go-routeros/routeros/tree/v1)
 
 To install it, run:
