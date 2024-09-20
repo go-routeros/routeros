@@ -77,9 +77,8 @@ func TestLoginIncorrectPre643(t *testing.T) {
 	err := c.Login("userTest", "passTest")
 	require.Error(t, err, "Login succeeded; want error")
 
-	var top *DeviceError
-	require.Truef(t, errors.As(err, &top), "want=DeviceError, have=%#v", err)
-	require.Contains(t, []string{"incorrect login"}, top.fetchMessage())
+	require.Truef(t, errors.Is(err, ErrIncorrectLogin),
+		"want=ErrIncorrectLogin, have=%#v", err)
 }
 
 func TestLoginIncorrectPost643(t *testing.T) {
@@ -96,9 +95,8 @@ func TestLoginIncorrectPost643(t *testing.T) {
 	err := c.Login("userTest", "passTest")
 	require.Error(t, err, "Login succeeded; want error")
 
-	var top *DeviceError
-	require.Truef(t, errors.As(err, &top), "want=DeviceError, have=%#v", err)
-	require.Contains(t, []string{"invalid user name or password (6)"}, top.fetchMessage())
+	require.Truef(t, errors.Is(err, ErrInvalidUserNameOrPassword),
+		"want=ErrInvalidUserNameOrPassword, have=%#v", err)
 }
 
 func TestLoginNoChallenge(t *testing.T) {

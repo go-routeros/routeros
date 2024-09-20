@@ -183,9 +183,7 @@ func TestInvalidLogin(t *testing.T) {
 
 	require.Error(t, err, "dial succeeded; want error")
 
-	var devErr *DeviceError
-	require.Truef(t, errors.As(err, &devErr), "wait for device error: %v", err)
-	require.Contains(t, []string{"cannot log in", "invalid user name or password (6)"}, devErr.fetchMessage())
+	require.Equal(t, ErrInvalidUserNameOrPassword, err)
 }
 
 func TestTrapHandling(tt *testing.T) {
