@@ -27,6 +27,19 @@ type DeviceError struct {
 	Sentence *proto.Sentence
 }
 
+type decodedDeviceError string
+
+// Well-known errors. We could just dynamically create these out of the various
+// strings we get back from RouterOS, but by listing them here we capture knowledge
+// and experience recognizing the different messages. This makes it easier for clients
+// to write good error-handling code.
+var (
+	ErrInvalidUserNameOrPassword = decodedDeviceError("invalid user name or password (6)")
+	ErrIncorrectLogin            = decodedDeviceError("incorrect login")
+	ErrAlreadyExists             = decodedDeviceError("failure:entry already exists")
+)
+
+func (e decodedDeviceError) Error() string { return string(e) }
 func (err *DeviceError) fetchMessage() string {
 	if m := err.Sentence.Map["message"]; m != "" {
 		return m
