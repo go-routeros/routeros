@@ -7,7 +7,7 @@ Look in the examples directory to learn how to use this library:
 [listen](examples/listen/main.go),
 [tab](examples/tab/main.go).
 
-API documentation is available at [godoc.org](https://godoc.org/github.com/go-routeros/routeros).
+API documentation is available at [pkg.go.dev](https://pkg.go.dev/github.com/go-routeros/routeros/v3).  
 Page on the [Mikrotik Wiki](http://wiki.mikrotik.com/wiki/API_in_Go).
 
 Usage of `gopkg.in` was removed in favor of Go modules. Please, update you import paths to
