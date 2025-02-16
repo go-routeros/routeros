@@ -13,6 +13,7 @@ const (
 	doneSentence  = "!done"
 	trapSentence  = "!trap"
 	reSentence    = "!re"
+	emptySentence = "!empty"
 )
 
 // ListenReply is the struct returned by the Listen*() functions.
@@ -125,7 +126,7 @@ func (l *ListenReply) processSentence(sen *proto.Sentence) (bool, error) {
 		return true, &DeviceError{sen}
 	case fatalSentence:
 		return true, &DeviceError{sen}
-	case "":
+	case "", emptySentence:
 		// API docs say that empty sentences should be ignored
 	default:
 		return true, &UnknownReplyError{sen}
